@@ -1,30 +1,20 @@
+import tomllib
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 from scipy.integrate import solve_ivp
 
-# PARAMETER NOTES
-# beta = Misinformation Transmission Rate
-# kappa = Exposed -> Active spreader rate
-# xi = Exposed Self-Correction Rate
-# omega = Prebunking Immunity Loss Rate
-#
-# u = Prebunking Campaign Rate
-# epsilon = Prebunking Efficacy
-# gamma = Correction Rate
-# rho = Reexposure Susceptibility
-SCENARIOS = {
-    "Baseline (Balanced Interventions)": {
-        "beta": 0.50,
-        "kappa": 0.25,
-        "xi": 0.15,
-        "omega": 0.04,
-        "u": 0.06,
-        "epsilon": 0.70,
-        "gamma": 0.20,
-        "rho": 0.20,
-    },
-}
+from model import seirp_ode
+
+
+def load_scenarios(filepath: str = "scenarios.toml"):
+    with open(filepath, "rb") as f:
+        data = tomllib.load(f)
+    return data["scenarios"]
+
+
+SCENARIOS = load_scenarios()
 
 
 def apply_preset():
@@ -36,83 +26,128 @@ def apply_preset():
 
 
 if "beta" not in st.session_state:
-    for key, val in SCENARIOS["Baseline (Balanced Interventions)"].items():
+    for key, val in SCENARIOS["Baseline"].items():
         st.session_state[key] = val
 
 
 st.set_page_config(page_title="SEIRP Misinformation Model", layout="wide")
 st.title("SEIRP Misinformation Model Simulation")
 
+
 st.sidebar.header("Scenario Selection")
 st.sidebar.selectbox(
-    "Choose a Preset Scenario:",
+    "Preset Scenario:",
     options=list(SCENARIOS.keys()) + ["Custom"],
     key="scenario_choice",
     on_change=apply_preset,
 )
 
 # Epidimiological Parameters
-st.sidebar.header("Epidimiological Parameters")
-N = st.sidebar.number_input("Population ($N$)", min_value=100, value=5000)
-days = st.sidebar.number_input("Days ($t$)", min_value=1, value=30)
+st.sidebar.header("Simulation Settings")
+N = st.sidebar.number_input(
+    "Population ($N$)",
+    min_value=100,
+    max_value=1_000_000,
+    step=100,
+    key="N",
+    value=5000,
+)
+days = st.sidebar.number_input(
+    "Simulation Duration in Days ($t$)",
+    min_value=1,
+    max_value=365,
+    step=1,
+    key="days",
+    value=30,
+)
+
+# Epidemiological Parameters
+st.sidebar.header("Epidemiological Parameters")
 beta = st.sidebar.slider(
-    r"Misinformation Transmission Rate ($\beta$)", 0.00, 1.50, 0.50, 0.01, key="beta"
+    r"Misinformation Transmission Rate ($\beta$)",
+    min_value=0.00,
+    max_value=2.00,
+    step=0.01,
+    key="beta",
 )
 kappa = st.sidebar.slider(
-    r"Exposed → Active Spreader Rate ($\kappa$)", 0.01, 1.00, 0.25, 0.01, key="kappa"
+    r"Exposed → Active Spreader Rate ($\kappa$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="kappa",
 )
 xi = st.sidebar.slider(
-    r"Exposed Self-Correction Rate ($\xi$)", 0.01, 1.00, 0.15, 0.01, key="xi"
+    r"Exposed Self-Correction Rate ($\xi$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="xi",
 )
 omega = st.sidebar.slider(
-    r"Prebunking Immunity Loss Rate ($\omega$)", 0.01, 0.50, 0.04, 0.01, key="omega"
+    r"Prebunking Immunity Loss Rate ($\omega$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="omega",
 )
 
 # Interventions
 st.sidebar.header("Interventions")
-u = st.sidebar.slider("Prebunking Campaign Rate ($u$)", 0.00, 0.50, 0.08, 0.01, key="u")
+u = st.sidebar.slider(
+    r"Prebunking Rate ($u$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="u",
+)
 epsilon = st.sidebar.slider(
-    r"Prebunking Efficacy ($\epsilon$)", 0.00, 1.00, 0.70, 0.01, key="epsilon"
+    r"Prebunking Effectiveness ($\epsilon$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="epsilon",
 )
 gamma = st.sidebar.slider(
-    r"Correction Rate ($\gamma$)", 0.01, 1.00, 0.20, 0.01, key="gamma"
+    r"Fact-checking Correction Rate ($\gamma$)",
+    min_value=0.01,
+    max_value=1.00,
+    step=0.01,
+    key="gamma",
 )
 rho = st.sidebar.slider(
-    r"Reexposure Susceptibility ($\rho$)", 0.00, 1.00, 0.20, 0.01, key="rho"
+    r"Re-exposure Susceptibility ($\rho$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="rho",
 )
 
-st.sidebar.header("Initial conditions")
-I0 = st.sidebar.number_input("Active spreaders ($I_0$)", 0, value=100)
-E0 = st.sidebar.number_input("Exposed ($E_0$)", 0, value=50)
-P0 = st.sidebar.number_input("Prebunked ($P_0$)", 0, value=10)
-R_init = st.sidebar.number_input("Corrected ($R_{init}$)", 0, value=0)
-S0 = N - (E0 + I0 + P0 + R_init)
-st.sidebar.number_input("Susceptible ($S_0$)", S0, disabled=True)
+# Initial Conditions
+st.sidebar.header("Initial Conditions")
+I0 = st.sidebar.number_input(
+    r"Active Spreaders ($I_0$)", min_value=0, max_value=int(N), value=100, step=1
+)
+E0 = st.sidebar.number_input(
+    r"Exposed ($E_0$)", min_value=0, max_value=int(N), value=50, step=1
+)
+P0 = st.sidebar.number_input(
+    r"Prebunked ($P_0$)", min_value=0, max_value=int(N), value=10, step=1
+)
+R_init = st.sidebar.number_input(
+    r"Corrected ($R_{init}$)", min_value=0, max_value=int(N), value=0, step=1
+)
 
+# Calculated initial susceptible population
+S0 = int(N - (E0 + I0 + P0 + R_init))
 
-def seirp_ode(t, y, beta, kappa, xi, omega, epsilon, rho):
-    S, E, I, R, P = y[0], y[1], y[2], y[3], y[4]
-    N = S + E + I + R + P
+if S0 < 0:
+    st.sidebar.error("Initial conditions compartments exceeds total population $N$")
+    st.stop()
 
-    # Individual rate of exposure
-    lam = (beta * I) / N if N > 0 else 0.0
-
-    # Susceptible population
-    dS_dt = -lam * S - u * S + omega * P
-
-    # Exposed population
-    dE_dt = lam * S + (1.0 - epsilon) * lam * P + rho * lam * R - kappa * E - xi * E
-
-    # Active spreaders
-    dI_dt = kappa * E - gamma * I
-
-    # Corrected population
-    dR_dt = xi * E + gamma * I - rho * lam * R
-
-    # Prebunked population
-    dP_dt = u * S - (1.0 - epsilon) * lam * P - omega * P
-
-    return [dS_dt, dE_dt, dI_dt, dR_dt, dP_dt]
+st.sidebar.number_input(
+    r"Susceptible ($S_0$)", value=S0, disabled=True, key="S0_display"
+)
 
 
 y0 = [S0, E0, I0, R_init, P0]
@@ -124,20 +159,90 @@ sol = solve_ivp(
     y0=y0,
     t_span=t_span,
     t_eval=t_eval,
-    args=(beta, kappa, xi, omega, epsilon, rho),
+    args=(beta, kappa, xi, omega, u, gamma, epsilon, rho),
     method="RK45",
 )
 
 S, E, I, R, P = sol.y
 
-R_0 = (beta * kappa / (gamma * (kappa * xi))) * (
+R_0 = (beta * kappa / (gamma * (kappa + xi))) * (
     (omega / (u + omega)) + (1.0 - epsilon) * (u / (u + omega))
 )
-peak_spreaders = int(np.max(I))
 
-col1, col2 = st.columns(2)
-col1.metric("Reproduction Threshold ($R_0$)", f"{R_0:.2f}")
-col2.metric("Peak Active Spreaders", f"{peak_spreaders:,}")
+s_max = int(np.max(S))
+e_max = int(np.max(E))
+i_max = int(np.max(I))
+r_max = int(np.max(R))
+p_max = int(np.max(P))
+
+r_final = int(R[-1])
+s_final = int(S[-1])
+e_final = int(E[-1])
+i_final = int(I[-1])
+r_final = int(R[-1])
+p_final = int(P[-1])
+
+s_peak = np.argmax(S)
+s_peak_day = sol.t[s_peak]
+e_peak = np.argmax(E)
+e_peak_day = sol.t[e_peak]
+i_peak = np.argmax(I)
+i_peak_day = sol.t[i_peak]
+r_peak = np.argmax(R)
+r_peak_day = sol.t[r_peak]
+p_peak = np.argmax(P)
+p_peak_day = sol.t[p_peak]
+
+st.metric(
+    "Reproduction rate ($R_0$)",
+    f"{R_0:.2f}",
+    delta=("Contained" if R_0 <= 1.0 else "Outbreak"),
+    delta_arrow="off",
+    delta_color=("green" if R_0 <= 1.0 else "red"),
+)
+
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric(
+    "$S_{max}$",
+    f"{s_max}",
+    delta=f"Day: {s_peak_day:.2f}",
+    delta_arrow="off",
+    delta_color="off",
+)
+c2.metric(
+    "$E_{max}$",
+    f"{e_max}",
+    delta=f"Day: {e_peak_day:.2f}",
+    delta_arrow="off",
+    delta_color="off",
+)
+c3.metric(
+    "$I_{max}$",
+    f"{i_max}",
+    delta=f"Day: {i_peak_day:.2f}",
+    delta_arrow="off",
+    delta_color="off",
+)
+c4.metric(
+    "$R_{max}$",
+    f"{r_max}",
+    delta=f"Day: {r_peak_day:.2f}",
+    delta_arrow="off",
+    delta_color="off",
+)
+c5.metric(
+    "$P_{max}$",
+    f"{p_max}",
+    delta=f"Day: {p_peak_day:.2f}",
+    delta_arrow="off",
+    delta_color="off",
+)
+
+c1.metric("$S_{final}$", f"{s_final}")
+c2.metric("$E_{final}$", f"{e_final}")
+c3.metric("$I_{final}$", f"{i_final}")
+c4.metric("$R_{final}$", f"{r_final}")
+c5.metric("$P_{final}$", f"{p_final}")
 
 chart_data = pd.DataFrame(
     {
@@ -150,8 +255,9 @@ chart_data = pd.DataFrame(
     index=np.round(sol.t, 2),
 )
 chart_data.index.name = "Day"
+
 st.line_chart(
     chart_data,
     color=["#2b5c8f", "#f39c12", "#c0392b", "#27ae60", "#8e44ad"],
-    use_container_width=True,
+    width="stretch",
 )
