@@ -14,6 +14,6 @@
       enable = true;
       sync.enable = true;
     };
-    libraries = with pkgs; [ ];
+    libraries = with pkgs; [ zlib ];
   };
 }
