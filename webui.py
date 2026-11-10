@@ -1,33 +1,85 @@
 import numpy as np
 import pandas as pd
+import streamlit as st
 from scipy.integrate import solve_ivp
 
-import streamlit as st
+# PARAMETER NOTES
+# beta = Misinformation Transmission Rate
+# kappa = Exposed -> Active spreader rate
+# xi = Exposed Self-Correction Rate
+# omega = Prebunking Immunity Loss Rate
+#
+# u = Prebunking Campaign Rate
+# epsilon = Prebunking Efficacy
+# gamma = Correction Rate
+# rho = Reexposure Susceptibility
+SCENARIOS = {
+    "Baseline (Balanced Interventions)": {
+        "beta": 0.50,
+        "kappa": 0.25,
+        "xi": 0.15,
+        "omega": 0.04,
+        "u": 0.06,
+        "epsilon": 0.70,
+        "gamma": 0.20,
+        "rho": 0.20,
+    },
+}
+
+
+def apply_preset():
+    selected = st.session_state["scenario_choice"]
+    if selected != "Custom":
+        preset_values = SCENARIOS[selected]
+        for key, val in preset_values.items():
+            st.session_state[key] = val
+
+
+if "beta" not in st.session_state:
+    for key, val in SCENARIOS["Baseline (Balanced Interventions)"].items():
+        st.session_state[key] = val
+
 
 st.set_page_config(page_title="SEIRP Misinformation Model", layout="wide")
 st.title("SEIRP Misinformation Model Simulation")
+
+st.sidebar.header("Scenario Selection")
+st.sidebar.selectbox(
+    "Choose a Preset Scenario:",
+    options=list(SCENARIOS.keys()) + ["Custom"],
+    key="scenario_choice",
+    on_change=apply_preset,
+)
 
 # Epidimiological Parameters
 st.sidebar.header("Epidimiological Parameters")
 N = st.sidebar.number_input("Population ($N$)", min_value=100, value=5000)
 days = st.sidebar.number_input("Days ($t$)", min_value=1, value=30)
 beta = st.sidebar.slider(
-    r"Misinformation Transmission Rate ($\beta$)", 0.00, 1.50, 0.50, 0.01
+    r"Misinformation Transmission Rate ($\beta$)", 0.00, 1.50, 0.50, 0.01, key="beta"
 )
 kappa = st.sidebar.slider(
-    r"Exposed → Active Spreader Rate ($\kappa$)", 0.01, 1.00, 0.25, 0.01
+    r"Exposed → Active Spreader Rate ($\kappa$)", 0.01, 1.00, 0.25, 0.01, key="kappa"
 )
-xi = st.sidebar.slider(r"Exposed Self-Correction Rate ($\xi$)", 0.01, 1.00, 0.15, 0.01)
+xi = st.sidebar.slider(
+    r"Exposed Self-Correction Rate ($\xi$)", 0.01, 1.00, 0.15, 0.01, key="xi"
+)
 omega = st.sidebar.slider(
-    r"Prebunking Immunity Loss Rate ($\omega$)", 0.01, 0.50, 0.04, 0.01
+    r"Prebunking Immunity Loss Rate ($\omega$)", 0.01, 0.50, 0.04, 0.01, key="omega"
 )
 
 # Interventions
 st.sidebar.header("Interventions")
-u = st.sidebar.slider("Prebunking Campaign Rate ($u$)", 0.00, 0.50, 0.08, 0.01)
-epsilon = st.sidebar.slider(r"Prebunking Efficacy ($\epsilon$)", 0.00, 1.00, 0.70, 0.01)
-gamma = st.sidebar.slider(r"Correction Rate ($\gamma$)", 0.01, 1.00, 0.20, 0.01)
-rho = st.sidebar.slider(r"Reexposure Susceptibility ($\rho$)", 0.00, 1.00, 0.20, 0.01)
+u = st.sidebar.slider("Prebunking Campaign Rate ($u$)", 0.00, 0.50, 0.08, 0.01, key="u")
+epsilon = st.sidebar.slider(
+    r"Prebunking Efficacy ($\epsilon$)", 0.00, 1.00, 0.70, 0.01, key="epsilon"
+)
+gamma = st.sidebar.slider(
+    r"Correction Rate ($\gamma$)", 0.01, 1.00, 0.20, 0.01, key="gamma"
+)
+rho = st.sidebar.slider(
+    r"Reexposure Susceptibility ($\rho$)", 0.00, 1.00, 0.20, 0.01, key="rho"
+)
 
 st.sidebar.header("Initial conditions")
 I0 = st.sidebar.number_input("Active spreaders ($I_0$)", 0, value=100)
@@ -101,6 +153,5 @@ chart_data.index.name = "Day"
 st.line_chart(
     chart_data,
     color=["#2b5c8f", "#f39c12", "#c0392b", "#27ae60", "#8e44ad"],
-    width=850,
-    height=500,
+    use_container_width=True,
 )
