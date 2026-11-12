@@ -1,13 +1,12 @@
-# PARAMETER NOTES
-# beta    = Misinformation Transmission Rate           [0.00, 2.00] (day^-1)
-# kappa   = Exposed -> Active spreader rate            [0.00, 1.00] (day^-1)
-# xi      = Exposed Self-Correction Rate               [0.00, 1.00] (day^-1)
-# omega   = Prebunking Immunity Loss Rate              [0.00, 1.00] (day^-1)
-#
-# u       = Prebunking Campaign Rate                   [0.00, 1.00] (day^-1)
-# epsilon = Prebunking Efficacy                        [0.00, 1.00] (%)
-# gamma   = Fact-Checking Correction Rate              [0.01, 1.00] (day^-1)
-# rho     = Re-exposure Susceptibility                 [0.00, 1.00] (%)
+# Parameter notes
+# beta    = Misinformation transmission rate       [0.00, 2.00] day^-1
+# kappa   = Exposed -> active spreader rate        [0.00, 1.00] day^-1
+# xi      = Exposed self-correction rate           [0.00, 1.00] day^-1
+# omega   = Prebunking immunity loss rate          [0.00, 1.00] day^-1
+# u       = Prebunking campaign rate               [0.00, 1.00] day^-1
+# epsilon = Prebunking effectiveness               [0.00, 1.00] dimensionless
+# gamma   = Fact-checking correction rate          [0.01, 1.00] day^-1
+# rho     = Re-exposure susceptibility             [0.00, 1.00] dimensionless
 
 [scenarios."Baseline"]
 beta = 0.50

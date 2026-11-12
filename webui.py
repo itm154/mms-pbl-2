@@ -1,263 +1,390 @@
 import tomllib
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 from scipy.integrate import solve_ivp
 
-from model import seirp_ode
+from model import calculate_r0, seirp_ode
+
+st.set_page_config(
+    page_title="SEIRP Misinformation Model",
+    layout="wide",
+)
 
 
-def load_scenarios(filepath: str = "scenarios.toml"):
-    with open(filepath, "rb") as f:
-        data = tomllib.load(f)
+def load_scenarios(filepath="scenarios.toml"):
+    """Load scenario presets from the TOML file beside this script."""
+    scenario_path = Path(__file__).with_name(filepath)
+    with scenario_path.open("rb") as file:
+        data = tomllib.load(file)
     return data["scenarios"]
 
 
+def apply_preset():
+    """Copy the selected preset's parameter values into widget state."""
+    selected = st.session_state["scenario_choice"]
+
+    if selected != "Custom":
+        for key, value in SCENARIOS[selected].items():
+            st.session_state[key] = value
+
+
+def reset_initial_conditions_for_population_change():
+    """Set sensible initial counts when total population changes."""
+    population = st.session_state["N"]
+
+    i0 = min(max(1, round(0.02 * population)), population)
+    e0 = min(max(1, round(0.01 * population)), population - i0)
+    p0 = min(
+        max(1, round(0.002 * population)),
+        population - i0 - e0,
+    )
+
+    st.session_state["I0"] = i0
+    st.session_state["E0"] = e0
+    st.session_state["P0"] = p0
+    st.session_state["R_initial"] = 0
+
+
+# ---------------------------------------------------------------------
+# Initialise session state before creating widgets.
+# ---------------------------------------------------------------------
 SCENARIOS = load_scenarios()
 
+defaults = {
+    "scenario_choice": "Baseline",
+    "N": 5000,
+    "days": 30,
+    "I0": 100,
+    "E0": 50,
+    "P0": 10,
+    "R_initial": 0,
+    **SCENARIOS["Baseline"],
+}
 
-def apply_preset():
-    selected = st.session_state["scenario_choice"]
-    if selected != "Custom":
-        preset_values = SCENARIOS[selected]
-        for key, val in preset_values.items():
-            st.session_state[key] = val
+for key, value in defaults.items():
+    st.session_state.setdefault(key, value)
 
 
-if "beta" not in st.session_state:
-    for key, val in SCENARIOS["Baseline"].items():
-        st.session_state[key] = val
-
-
-st.set_page_config(page_title="SEIRP Misinformation Model", layout="wide")
+# ---------------------------------------------------------------------
+# Page heading.
+# ---------------------------------------------------------------------
 st.title("SEIRP Misinformation Model Simulation")
+st.caption(
+    "Explore how misinformation spreads and how prebunking and "
+    "fact-checking interventions affect the population."
+)
 
 
+# ---------------------------------------------------------------------
+# Sidebar: scenario selection and general settings.
+# ---------------------------------------------------------------------
 st.sidebar.header("Scenario Selection")
+
 st.sidebar.selectbox(
-    "Preset Scenario:",
-    options=list(SCENARIOS.keys()) + ["Custom"],
+    "Preset scenario",
+    options=list(SCENARIOS) + ["Custom"],
     key="scenario_choice",
     on_change=apply_preset,
 )
 
-# Epidimiological Parameters
 st.sidebar.header("Simulation Settings")
+
 N = st.sidebar.number_input(
-    "Population ($N$)",
+    "Total population ($N$)",
     min_value=100,
     max_value=1_000_000,
     step=100,
     key="N",
-    value=5000,
+    on_change=reset_initial_conditions_for_population_change,
 )
+
 days = st.sidebar.number_input(
-    "Simulation Duration in Days ($t$)",
+    "Simulation duration ($t$, days)",
     min_value=1,
     max_value=365,
     step=1,
     key="days",
-    value=30,
 )
 
-# Epidemiological Parameters
+
+# ---------------------------------------------------------------------
+# Sidebar: model parameters.
+# ---------------------------------------------------------------------
 st.sidebar.header("Epidemiological Parameters")
+
 beta = st.sidebar.slider(
-    r"Misinformation Transmission Rate ($\beta$)",
+    r"Misinformation transmission rate ($\beta$)",
     min_value=0.00,
     max_value=2.00,
     step=0.01,
     key="beta",
 )
+
 kappa = st.sidebar.slider(
-    r"Exposed → Active Spreader Rate ($\kappa$)",
+    r"Exposed $\rightarrow$ active spreader rate ($\kappa$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="kappa",
 )
+
 xi = st.sidebar.slider(
-    r"Exposed Self-Correction Rate ($\xi$)",
+    r"Exposed self-correction rate ($\xi$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="xi",
 )
+
 omega = st.sidebar.slider(
-    r"Prebunking Immunity Loss Rate ($\omega$)",
+    r"Prebunking immunity loss rate ($\omega$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="omega",
 )
 
-# Interventions
+
+# ---------------------------------------------------------------------
+# Sidebar: interventions.
+# ---------------------------------------------------------------------
 st.sidebar.header("Interventions")
+
 u = st.sidebar.slider(
-    r"Prebunking Rate ($u$)",
+    r"Prebunking campaign rate ($u$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="u",
 )
+
 epsilon = st.sidebar.slider(
-    r"Prebunking Effectiveness ($\epsilon$)",
+    r"Prebunking effectiveness ($\epsilon$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="epsilon",
 )
+
 gamma = st.sidebar.slider(
-    r"Fact-checking Correction Rate ($\gamma$)",
+    r"Fact-checking correction rate ($\gamma$)",
     min_value=0.01,
-    max_value=1.00,
+    max_value=1.0,
     step=0.01,
     key="gamma",
 )
+
 rho = st.sidebar.slider(
-    r"Re-exposure Susceptibility ($\rho$)",
+    r"Re-exposure susceptibility ($\rho$)",
     min_value=0.00,
     max_value=1.00,
     step=0.01,
     key="rho",
 )
 
-# Initial Conditions
+
+# ---------------------------------------------------------------------
+# Sidebar: Initial conditions.
+# ---------------------------------------------------------------------
 st.sidebar.header("Initial Conditions")
+
 I0 = st.sidebar.number_input(
-    r"Active Spreaders ($I_0$)", min_value=0, max_value=int(N), value=100, step=1
-)
-E0 = st.sidebar.number_input(
-    r"Exposed ($E_0$)", min_value=0, max_value=int(N), value=50, step=1
-)
-P0 = st.sidebar.number_input(
-    r"Prebunked ($P_0$)", min_value=0, max_value=int(N), value=10, step=1
-)
-R_init = st.sidebar.number_input(
-    r"Corrected ($R_{init}$)", min_value=0, max_value=int(N), value=0, step=1
+    r"Active spreaders ($I_0$)",
+    min_value=0,
+    max_value=N,
+    step=1,
+    key="I0",
 )
 
-# Calculated initial susceptible population
-S0 = int(N - (E0 + I0 + P0 + R_init))
+E0 = st.sidebar.number_input(
+    r"Exposed ($E_0$)",
+    min_value=0,
+    max_value=N,
+    step=1,
+    key="E0",
+)
+
+P0 = st.sidebar.number_input(
+    r"Prebunked ($P_0$)",
+    min_value=0,
+    max_value=N,
+    step=1,
+    key="P0",
+)
+
+R_initial = st.sidebar.number_input(
+    "Corrected ($R_{init}$)",
+    min_value=0,
+    max_value=N,
+    step=1,
+    key="R_initial",
+)
+
+S0 = N - (E0 + I0 + P0 + R_initial)
 
 if S0 < 0:
-    st.sidebar.error("Initial conditions compartments exceeds total population $N$")
+    st.sidebar.error(
+        "The initial compartment values exceed the total population. "
+        r"Reduce $E_0$, $I_0$, $P_0$ or the initial corrected population."
+    )
     st.stop()
 
-st.sidebar.number_input(
-    r"Susceptible ($S_0$)", value=S0, disabled=True, key="S0_display"
+st.sidebar.metric(
+    r"Calculated susceptible population ($S_0$)",
+    f"{S0:,}",
 )
 
 
-y0 = [S0, E0, I0, R_init, P0]
-t_span = (0, days)
-t_eval = np.linspace(0, days, days)
+# ---------------------------------------------------------------------
+# Calculate reproduction threshold and display interpretation.
+# ---------------------------------------------------------------------
+r0_value = calculate_r0(
+    beta,
+    kappa,
+    xi,
+    omega,
+    u,
+    gamma,
+    epsilon,
+)
 
-sol = solve_ivp(
+st.subheader("Reproduction Number")
+
+if r0_value is None or not np.isfinite(r0_value):
+    st.metric(r"$R_0$", "N/A")
+    st.warning("Reproduction threshold is undefined.")
+    st.caption(
+        r"Check that $\kappa + \xi$, $u + \omega$, and $\gamma$ are greater than zero."
+    )
+
+else:
+    st.metric(r"$R_0$", f"{r0_value:.2f}")
+
+    if np.isclose(r0_value, 1.0, atol=1e-9):
+        st.warning("At Threshold")
+        st.caption(
+            "The reproduction threshold is approximately 1. "
+            "The system is at the critical boundary between decline "
+            "and potential growth."
+        )
+
+    elif r0_value < 1.0:
+        st.success("Contained")
+        st.caption(
+            r"$R_0$ below 1 indicates that misinformation spread is expected "
+            "to decline near the assumed disease-free equilibrium."
+        )
+
+    else:
+        st.error("Outbreak Potential")
+        st.caption(
+            r"$R_0$ above 1 indicates that misinformation has the potential "
+            "to spread and grow. It does not guarantee an outbreak."
+        )
+
+st.caption(
+    "This reproduction threshold is calculated under the assumed "
+    "disease-free equilibrium with R* = 0. It is a threshold indicator, "
+    "not a guarantee of the exact simulated trajectory."
+)
+
+
+# ---------------------------------------------------------------------
+# Solve the SEIRP ODE system.
+# ---------------------------------------------------------------------
+y0 = [S0, E0, I0, R_initial, P0]
+t_span = (0, days)
+t_eval = np.linspace(0, days, days + 1)
+
+solution = solve_ivp(
     fun=seirp_ode,
     y0=y0,
     t_span=t_span,
     t_eval=t_eval,
     args=(beta, kappa, xi, omega, u, gamma, epsilon, rho),
     method="RK45",
+    rtol=1e-6,
+    atol=1e-8,
 )
 
-S, E, I, R, P = sol.y
+if not solution.success:
+    st.error(f"The numerical solver could not complete: {solution.message}")
+    st.stop()
 
-R_0 = (beta * kappa / (gamma * (kappa + xi))) * (
-    (omega / (u + omega)) + (1.0 - epsilon) * (u / (u + omega))
-)
+S, E, I, R, P = solution.y
 
-s_max = int(np.max(S))
-e_max = int(np.max(E))
-i_max = int(np.max(I))
-r_max = int(np.max(R))
-p_max = int(np.max(P))
 
-r_final = int(R[-1])
-s_final = int(S[-1])
-e_final = int(E[-1])
-i_final = int(I[-1])
-r_final = int(R[-1])
-p_final = int(P[-1])
+# ---------------------------------------------------------------------
+# Peak population and peak day.
+# ---------------------------------------------------------------------
+compartments = {
+    "Susceptible (S)": S,
+    "Exposed (E)": E,
+    "Active Spreaders (I)": I,
+    "Corrected (R)": R,
+    "Prebunked (P)": P,
+}
 
-s_peak = np.argmax(S)
-s_peak_day = sol.t[s_peak]
-e_peak = np.argmax(E)
-e_peak_day = sol.t[e_peak]
-i_peak = np.argmax(I)
-i_peak_day = sol.t[i_peak]
-r_peak = np.argmax(R)
-r_peak_day = sol.t[r_peak]
-p_peak = np.argmax(P)
-p_peak_day = sol.t[p_peak]
+st.subheader("Maximum Population and Peak Day")
+peak_columns = st.columns(5)
 
-st.metric(
-    "Reproduction rate ($R_0$)",
-    f"{R_0:.2f}",
-    delta=("Contained" if R_0 <= 1.0 else "Outbreak"),
-    delta_arrow="off",
-    delta_color=("green" if R_0 <= 1.0 else "red"),
-)
+for column, (name, values) in zip(peak_columns, compartments.items()):
+    peak_index = np.argmax(values)
+    column.metric(
+        f"{name} maximum",
+        f"{values[peak_index]:,.0f}",
+        delta=f"Day {solution.t[peak_index]:.0f}",
+        delta_color="off",
+    )
 
-c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric(
-    "$S_{max}$",
-    f"{s_max}",
-    delta=f"Day: {s_peak_day:.2f}",
-    delta_arrow="off",
-    delta_color="off",
-)
-c2.metric(
-    "$E_{max}$",
-    f"{e_max}",
-    delta=f"Day: {e_peak_day:.2f}",
-    delta_arrow="off",
-    delta_color="off",
-)
-c3.metric(
-    "$I_{max}$",
-    f"{i_max}",
-    delta=f"Day: {i_peak_day:.2f}",
-    delta_arrow="off",
-    delta_color="off",
-)
-c4.metric(
-    "$R_{max}$",
-    f"{r_max}",
-    delta=f"Day: {r_peak_day:.2f}",
-    delta_arrow="off",
-    delta_color="off",
-)
-c5.metric(
-    "$P_{max}$",
-    f"{p_max}",
-    delta=f"Day: {p_peak_day:.2f}",
-    delta_arrow="off",
-    delta_color="off",
-)
 
-c1.metric("$S_{final}$", f"{s_final}")
-c2.metric("$E_{final}$", f"{e_final}")
-c3.metric("$I_{final}$", f"{i_final}")
-c4.metric("$R_{final}$", f"{r_final}")
-c5.metric("$P_{final}$", f"{p_final}")
+# ---------------------------------------------------------------------
+# Final population.
+# ---------------------------------------------------------------------
+st.subheader("Final Population")
+final_columns = st.columns(5)
+
+for column, (name, values) in zip(final_columns, compartments.items()):
+    column.metric(
+        name,
+        f"{values[-1]:,.0f}",
+    )
+
+
+# ---------------------------------------------------------------------
+# Plot all five compartments.
+# ---------------------------------------------------------------------
+st.subheader("SEIRP Population Trends")
 
 chart_data = pd.DataFrame(
-    {
-        "Susceptible (S)": S,
-        "Exposed (E)": E,
-        "Active Spreaders (I)": I,
-        "Corrected (R)": R,
-        "Prebunked (P)": P,
-    },
-    index=np.round(sol.t, 2),
+    compartments,
+    index=solution.t,
 )
+
 chart_data.index.name = "Day"
 
 st.line_chart(
     chart_data,
-    color=["#2b5c8f", "#f39c12", "#c0392b", "#27ae60", "#8e44ad"],
+    x_label="Day",
+    y_label="Population",
     width="stretch",
+)
+
+with st.expander("View simulation data"):
+    st.dataframe(
+        chart_data.round(4),
+        width="stretch",
+    )
+
+
+# ---------------------------------------------------------------------
+# Model assumptions.
+# ---------------------------------------------------------------------
+st.caption(
+    "Model assumptions: closed population; no births or deaths; "
+    "prebunking effectiveness reduces exposure among the P compartment; "
+    r"corrected individuals may be re-exposed according to $\rho$."
 )
