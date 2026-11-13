@@ -1,29 +1,35 @@
 # Parameter notes
+# Epidemiological
 # beta    = Misinformation transmission rate       [0.00, 2.00] day^-1
 # kappa   = Exposed -> active spreader rate        [0.00, 1.00] day^-1
 # xi      = Exposed self-correction rate           [0.00, 1.00] day^-1
 # omega   = Prebunking immunity loss rate          [0.00, 1.00] day^-1
+# rho     = Re-exposure susceptibility             [0.00, 1.00] dimensionless
+
+# Interventions:
 # u       = Prebunking campaign rate               [0.00, 1.00] day^-1
 # epsilon = Prebunking effectiveness               [0.00, 1.00] dimensionless
 # gamma   = Fact-checking correction rate          [0.01, 1.00] day^-1
-# rho     = Re-exposure susceptibility             [0.00, 1.00] dimensionless
 
+# Regular misinformation, non viral, no prebunking
 [scenarios."Baseline"]
-beta = 0.50
-kappa = 0.25
-xi = 0.15
-omega = 0.04
-u = 0.06
-epsilon = 0.70
-gamma = 0.20
+beta = 1.20
+kappa = 2.00
+xi = 0.40
+omega = 0.03
 rho = 0.20
+u = 0.05
+epsilon = 0.65
+gamma = 0.30
 
+# High transmission rate, high exposed to spreader conversion
+# Less likely to self-correct due to emotion driven sharing
 [scenarios."Viral Post"]
-beta = 0.80
-kappa = 0.25
-xi = 0.15
-omega = 0.04
-u = 0.06
-epsilon = 0.70
-gamma = 0.20
+beta = 1.80
+kappa = 2.7
+xi = 0.30
+omega = 0.03
 rho = 0.20
+u = 0.05
+epsilon = 0.65
+gamma = 0.30

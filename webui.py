@@ -55,11 +55,11 @@ SCENARIOS = load_scenarios()
 
 defaults = {
     "scenario_choice": "Baseline",
-    "N": 5000,
-    "days": 30,
-    "I0": 100,
-    "E0": 50,
-    "P0": 10,
+    "N": 628000,
+    "days": 90,
+    "I0": 50,
+    "E0": 0,
+    "P0": 0,
     "R_initial": 0,
     **SCENARIOS["Baseline"],
 }
@@ -95,8 +95,7 @@ st.sidebar.header("Simulation Settings")
 N = st.sidebar.number_input(
     "Total population ($N$)",
     min_value=100,
-    max_value=1_000_000,
-    step=100,
+    step=1000,
     key="N",
     on_change=reset_initial_conditions_for_population_change,
 )
@@ -126,7 +125,7 @@ beta = st.sidebar.slider(
 kappa = st.sidebar.slider(
     r"Exposed $\rightarrow$ active spreader rate ($\kappa$)",
     min_value=0.00,
-    max_value=1.00,
+    max_value=3.00,
     step=0.01,
     key="kappa",
 )
@@ -145,6 +144,14 @@ omega = st.sidebar.slider(
     max_value=1.00,
     step=0.01,
     key="omega",
+)
+
+rho = st.sidebar.slider(
+    r"Re-exposure susceptibility ($\rho$)",
+    min_value=0.00,
+    max_value=1.00,
+    step=0.01,
+    key="rho",
 )
 
 
@@ -175,14 +182,6 @@ gamma = st.sidebar.slider(
     max_value=1.0,
     step=0.01,
     key="gamma",
-)
-
-rho = st.sidebar.slider(
-    r"Re-exposure susceptibility ($\rho$)",
-    min_value=0.00,
-    max_value=1.00,
-    step=0.01,
-    key="rho",
 )
 
 
@@ -247,8 +246,8 @@ r0_value = calculate_r0(
     xi,
     omega,
     u,
-    gamma,
     epsilon,
+    gamma,
 )
 
 st.subheader("Reproduction Number")
@@ -304,7 +303,7 @@ solution = solve_ivp(
     y0=y0,
     t_span=t_span,
     t_eval=t_eval,
-    args=(beta, kappa, xi, omega, u, gamma, epsilon, rho),
+    args=(beta, kappa, xi, omega, rho, u, epsilon, gamma),
     method="RK45",
     rtol=1e-6,
     atol=1e-8,

@@ -1,4 +1,4 @@
-def seirp_ode(t, y, beta, kappa, xi, omega, u, gamma, epsilon, rho):
+def seirp_ode(t, y, beta, kappa, xi, omega, rho, u, epsilon, gamma):
     """
     SEIRP misinformation model.
 
@@ -8,6 +8,18 @@ def seirp_ode(t, y, beta, kappa, xi, omega, u, gamma, epsilon, rho):
         I: Active spreaders
         R: Corrected
         P: Prebunked
+
+    Epidemiological / Behavioral Parameters:
+        beta: Misinformation transmission rate
+        kappa: Exposed -> active spreader rate
+        xi: Exposed self-correction rate
+        omega: Prebunking immunity loss rate
+        rho: Re-exposure susceptibility
+
+    Interventions:
+        u: Prebunking campaign rate
+        epsilon: Prebunking effectiveness
+        gamma: Fact-checking correction rate
     """
     S, E, I, R, P = y
     N = S + E + I + R + P
@@ -24,7 +36,7 @@ def seirp_ode(t, y, beta, kappa, xi, omega, u, gamma, epsilon, rho):
     return [dS_dt, dE_dt, dI_dt, dR_dt, dP_dt]
 
 
-def calculate_r0(beta, kappa, xi, omega, u, gamma, epsilon):
+def calculate_r0(beta, kappa, xi, omega, u, epsilon, gamma):
     """
     Calculate the project's reproduction threshold under the
     disease-free equilibrium, assuming R* = 0.
