@@ -50,8 +50,14 @@ beta = 1.20
 kappa = 2.00
 xi = 0.40
 omega = 0.03
-rho = 0.60
+rho = 0.40
 
+[epidemiological."No Relapse"]
+beta = 1.20
+kappa = 2.00
+xi = 0.40
+omega = 0.03
+rho = 0.0
 
 # =====================================================================
 # Intervention Scenarios
@@ -66,7 +72,7 @@ gamma = 0.30
 # Aggressive combined strategy, strong prebunking and rapid fact-checking
 [interventions."Aggressive Combined"]
 u = 0.10
-epsilon = 0.50
+epsilon = 0.65
 gamma = 0.60
 
 # No active interventions
