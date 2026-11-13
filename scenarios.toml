@@ -1,7 +1,7 @@
 # Parameter notes
 # Epidemiological
 # beta    = Misinformation transmission rate       [0.00, 2.00] day^-1
-# kappa   = Exposed -> active spreader rate        [0.00, 1.00] day^-1
+# kappa   = Exposed -> active spreader rate        [0.00, 3.00] day^-1
 # xi      = Exposed self-correction rate           [0.00, 1.00] day^-1
 # omega   = Prebunking immunity loss rate          [0.00, 1.00] day^-1
 # rho     = Re-exposure susceptibility             [0.00, 1.00] dimensionless
@@ -11,25 +11,78 @@
 # epsilon = Prebunking effectiveness               [0.00, 1.00] dimensionless
 # gamma   = Fact-checking correction rate          [0.01, 1.00] day^-1
 
-# Regular misinformation, non viral, no prebunking
-[scenarios."Baseline"]
+# =====================================================================
+# Epidemiological Scenarios
+# =====================================================================
+
+# Time-relevant misinformation post on a moderately popular account
+[epidemiological."Baseline"]
 beta = 1.20
 kappa = 2.00
 xi = 0.40
 omega = 0.03
 rho = 0.20
+
+
+# Random inconsequential post by a small account
+# Less likely to be shared around
+[epidemiological."Ordinary Post"]
+beta = 0.70
+kappa = 1.00
+xi = 0.30
+omega = 0.03
+rho = 0.20
+
+# High transmission rate, high exposed to spreader conversion
+# Less likely to self-correct due to emotion-driven sharing
+[epidemiological."Viral Post"]
+beta = 1.80
+kappa = 2.70
+xi = 0.30
+omega = 0.03
+rho = 0.20
+
+
+# High relapse: individuals who have already accepted a factual 
+# correction continue to be influenced by the misinformation if they see it again
+[epidemiological."High Relapse"]
+beta = 1.20
+kappa = 2.00
+xi = 0.40
+omega = 0.03
+rho = 0.60
+
+
+# =====================================================================
+# Intervention Scenarios
+# =====================================================================
+
+# Default moderate intervention with both prebunking and fact-checking
+[interventions."Combined (Baseline)"]
 u = 0.05
 epsilon = 0.65
 gamma = 0.30
 
-# High transmission rate, high exposed to spreader conversion
-# Less likely to self-correct due to emotion driven sharing
-[scenarios."Viral Post"]
-beta = 1.80
-kappa = 2.7
-xi = 0.30
-omega = 0.03
-rho = 0.20
-u = 0.05
-epsilon = 0.65
-gamma = 0.30
+# Aggressive combined strategy, strong prebunking and rapid fact-checking
+[interventions."Aggressive Combined"]
+u = 0.10
+epsilon = 0.50
+gamma = 0.60
+
+# No active interventions
+[interventions."No Intervention"]
+u = 0.00
+epsilon = 0.60
+gamma = 0.01
+
+# Fact-checking only
+[interventions."Fact-Checking Only"]
+u = 0.00
+epsilon = 0.60
+gamma = 0.50
+
+# Prebunking only
+[interventions."Prebunking Only"]
+u = 0.08
+epsilon = 0.70
+gamma = 0.01

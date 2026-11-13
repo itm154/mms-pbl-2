@@ -15,53 +15,60 @@ st.set_page_config(
 
 
 def load_scenarios(filepath="scenarios.toml"):
-    """Load scenario presets from the TOML file beside this script."""
+    """Load epidemiological and intervention scenario presets from TOML."""
     scenario_path = Path(__file__).with_name(filepath)
     with scenario_path.open("rb") as file:
         data = tomllib.load(file)
-    return data["scenarios"]
+    epi = data.get("epidemiological", {})
+    interventions = data.get("interventions", {})
+    return epi, interventions
 
 
-def apply_preset():
-    """Copy the selected preset's parameter values into widget state."""
-    selected = st.session_state["scenario_choice"]
+def apply_epi_preset():
+    """Copy the selected epidemiological preset's values into widget state."""
+    selected = st.session_state["epi_choice"]
 
-    if selected != "Custom":
-        for key, value in SCENARIOS[selected].items():
+    if selected != "Custom" and selected in EPIDEMIOLOGICAL_SCENARIOS:
+        for key, value in EPIDEMIOLOGICAL_SCENARIOS[selected].items():
             st.session_state[key] = value
 
 
-def reset_initial_conditions_for_population_change():
-    """Set sensible initial counts when total population changes."""
-    population = st.session_state["N"]
+def apply_intervention_preset():
+    """Copy the selected intervention preset's values into widget state."""
+    selected = st.session_state["intervention_choice"]
 
-    i0 = min(max(1, round(0.02 * population)), population)
-    e0 = min(max(1, round(0.01 * population)), population - i0)
-    p0 = min(
-        max(1, round(0.002 * population)),
-        population - i0 - e0,
-    )
-
-    st.session_state["I0"] = i0
-    st.session_state["E0"] = e0
-    st.session_state["P0"] = p0
-    st.session_state["R_initial"] = 0
+    if selected != "Custom" and selected in INTERVENTION_SCENARIOS:
+        for key, value in INTERVENTION_SCENARIOS[selected].items():
+            st.session_state[key] = value
 
 
 # ---------------------------------------------------------------------
 # Initialise session state before creating widgets.
 # ---------------------------------------------------------------------
-SCENARIOS = load_scenarios()
+EPIDEMIOLOGICAL_SCENARIOS, INTERVENTION_SCENARIOS = load_scenarios()
+
+default_epi = (
+    "Baseline"
+    if "Baseline" in EPIDEMIOLOGICAL_SCENARIOS
+    else next(iter(EPIDEMIOLOGICAL_SCENARIOS), "Custom")
+)
+default_intervention = (
+    "Baseline"
+    if "Baseline" in INTERVENTION_SCENARIOS
+    else next(iter(INTERVENTION_SCENARIOS), "Custom")
+)
 
 defaults = {
-    "scenario_choice": "Baseline",
+    "epi_choice": default_epi,
+    "intervention_choice": default_intervention,
     "N": 628000,
     "days": 90,
     "I0": 50,
     "E0": 0,
     "P0": 0,
     "R_initial": 0,
-    **SCENARIOS["Baseline"],
+    **EPIDEMIOLOGICAL_SCENARIOS.get(default_epi, {}),
+    **INTERVENTION_SCENARIOS.get(default_intervention, {}),
 }
 
 for key, value in defaults.items():
@@ -84,10 +91,17 @@ st.caption(
 st.sidebar.header("Scenario Selection")
 
 st.sidebar.selectbox(
-    "Preset scenario",
-    options=list(SCENARIOS) + ["Custom"],
-    key="scenario_choice",
-    on_change=apply_preset,
+    "Epidemiological scenario",
+    options=list(EPIDEMIOLOGICAL_SCENARIOS) + ["Custom"],
+    key="epi_choice",
+    on_change=apply_epi_preset,
+)
+
+st.sidebar.selectbox(
+    "Intervention scenario",
+    options=list(INTERVENTION_SCENARIOS) + ["Custom"],
+    key="intervention_choice",
+    on_change=apply_intervention_preset,
 )
 
 st.sidebar.header("Simulation Settings")
@@ -97,7 +111,6 @@ N = st.sidebar.number_input(
     min_value=100,
     step=1000,
     key="N",
-    on_change=reset_initial_conditions_for_population_change,
 )
 
 days = st.sidebar.number_input(
