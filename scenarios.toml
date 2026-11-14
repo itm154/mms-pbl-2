@@ -78,17 +78,29 @@ gamma = 0.60
 # No active interventions
 [interventions."No Intervention"]
 u = 0.00
-epsilon = 0.60
+epsilon = 0.65
 gamma = 0.01
 
 # Fact-checking only
 [interventions."Fact-Checking Only"]
 u = 0.00
-epsilon = 0.60
-gamma = 0.50
+epsilon = 0.65
+gamma = 0.30
 
 # Prebunking only
 [interventions."Prebunking Only"]
-u = 0.08
-epsilon = 0.70
+u = 0.05
+epsilon = 0.65
+gamma = 0.01
+
+# Aggressive Fact-checking only
+[interventions."Aggressive Fact-Checking Only"]
+u = 0.00
+epsilon = 0.65
+gamma = 0.60
+
+# Aggressive Prebunking only
+[interventions."Aggressive Prebunking Only"]
+u = 0.10
+epsilon = 0.65
 gamma = 0.01
