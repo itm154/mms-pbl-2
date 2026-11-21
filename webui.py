@@ -61,7 +61,7 @@ default_intervention = (
 defaults = {
     "epi_choice": default_epi,
     "intervention_choice": default_intervention,
-    "N": 628000,
+    "N": 628600,
     "days": 90,
     "I0": 50,
     "E0": 0,
