@@ -20,7 +20,7 @@
 beta = 1.20
 kappa = 2.00
 xi = 0.40
-omega = 0.03
+omega = 0.05
 rho = 0.20
 
 
@@ -30,7 +30,7 @@ rho = 0.20
 beta = 0.70
 kappa = 1.00
 xi = 0.30
-omega = 0.03
+omega = 0.05
 rho = 0.20
 
 # High transmission rate, high exposed to spreader conversion
@@ -39,7 +39,7 @@ rho = 0.20
 beta = 1.80
 kappa = 2.70
 xi = 0.30
-omega = 0.03
+omega = 0.05
 rho = 0.20
 
 
@@ -49,14 +49,14 @@ rho = 0.20
 beta = 1.20
 kappa = 2.00
 xi = 0.40
-omega = 0.03
+omega = 0.05
 rho = 0.40
 
 [epidemiological."No Relapse"]
 beta = 1.20
 kappa = 2.00
 xi = 0.40
-omega = 0.03
+omega = 0.05
 rho = 0.0
 
 # =====================================================================
