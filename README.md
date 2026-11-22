@@ -21,7 +21,12 @@ Ensure you have [uv](https://docs.astral.sh/uv/) installed
     uv sync
     ```
 
-4. Run simulation WebUI (or basic maplotlib model [todo])
-    ```sh
-    streamlit run webui.py
-    ```
+4. Run simulation WebUI or generate scenario plots
+    - WebUI:
+        ```sh
+        streamlit run webui.py
+        ```
+    - Plot all scenario combinations:
+        ```sh
+        python plot.py
+        ```

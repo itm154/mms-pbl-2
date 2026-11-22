@@ -39,7 +39,7 @@ rho = 0.20
 beta = 1.80
 kappa = 2.70
 xi = 0.30
-omega = 0.05
+omega = 0.03
 rho = 0.20
 
 
@@ -64,19 +64,19 @@ rho = 0.0
 # =====================================================================
 
 # Default moderate intervention with both prebunking and fact-checking
-[interventions."Combined (Baseline)"]
+[interventions."Natural Response (Baseline)"]
 u = 0.05
 epsilon = 0.65
 gamma = 0.30
 
 # Aggressive combined strategy, strong prebunking and rapid fact-checking
-[interventions."Aggressive Combined"]
+[interventions."Government-Backed Response"]
 u = 0.10
 epsilon = 0.65
 gamma = 0.60
 
 # No active interventions
-[interventions."No Intervention"]
+[interventions."No Interventions"]
 u = 0.00
 epsilon = 0.65
 gamma = 0.01
