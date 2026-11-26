@@ -16,7 +16,7 @@
 # =====================================================================
 
 # Time-relevant misinformation post on a moderately popular account
-[epidemiological."Baseline"]
+[epidemiological."Baseline Post"]
 beta = 1.20
 kappa = 2.00
 xi = 0.40
