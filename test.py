@@ -32,7 +32,7 @@ def simulate_i(t_eval, params, y0):
         atol=1e-9,
     )
     if not sol.success:
-        return np.full(t_eval, np.nan, dtype=float)
+        return np.full_like(t_eval, np.nan, dtype=float)
     return sol.y[2]  # I only
 
 
@@ -94,6 +94,7 @@ def main():
     plt.axvline(
         t_hours[split_idx], color="gray", linestyle=":", label="Train/Test split"
     )
+    plt.title("Active Spreaders Forecast")
     plt.xlabel("Time (hours)")
     plt.ylabel("Active spreaders (I)")
     plt.legend()
@@ -120,6 +121,7 @@ def main():
     print(
         f"Without outlier RMSE: {rmse_clean:.2f}, MAE: {mae_clean:.2f}, R2: {r2_clean:.2f}"
     )
+    print(f"Predicted parameters: {popt}")
 
 
 if __name__ == "__main__":
