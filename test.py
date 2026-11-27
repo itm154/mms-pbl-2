@@ -5,10 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
 from scipy.optimize import least_squares
-from sklearn.metrics import (
-    mean_absolute_error,
-    root_mean_squared_error,
-)
+from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
 from model import seirp_ode
 
@@ -108,6 +105,7 @@ def main():
 
     rmse_all = root_mean_squared_error(y_test, i_test_pred)
     mae_all = mean_absolute_error(y_test, i_test_pred)
+    r2_all = r2_score(y_test, i_test_pred)
 
     outlier_idx = int(np.argmax(err))
     outlier_mask = np.arange(len(y_test)) != outlier_idx
@@ -116,9 +114,12 @@ def main():
         y_test[outlier_mask], i_test_pred[outlier_mask]
     )
     mae_clean = mean_absolute_error(y_test[outlier_mask], i_test_pred[outlier_mask])
+    r2_clean = r2_score(y_test[outlier_mask], i_test_pred[outlier_mask])
 
-    print(f"With outlier RMSE: {rmse_all:.2f}, MAE: {mae_all:.2f}")
-    print(f"Without outlier RMSE: {rmse_clean:.2f}, MAE: {mae_clean:.2f}")
+    print(f"With outlier RMSE: {rmse_all:.2f}, MAE: {mae_all:.2f}, R2: {r2_all:.2f}")
+    print(
+        f"Without outlier RMSE: {rmse_clean:.2f}, MAE: {mae_clean:.2f}, R2: {r2_clean:.2f}"
+    )
 
 
 if __name__ == "__main__":
