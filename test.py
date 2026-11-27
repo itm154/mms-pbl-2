@@ -108,8 +108,9 @@ def main():
     mae_all = mean_absolute_error(y_test, i_test_pred)
     r2_all = r2_score(y_test, i_test_pred)
 
-    outlier_idx = int(np.argmax(err))
-    outlier_mask = np.arange(len(y_test)) != outlier_idx
+    q25, q75 = np.percentile(err, [25, 75])
+    iqr = q75 - q25
+    outlier_mask = err <= (q75 + 1.5 * iqr)
 
     rmse_clean = root_mean_squared_error(
         y_test[outlier_mask], i_test_pred[outlier_mask]

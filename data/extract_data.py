@@ -61,7 +61,7 @@ def main():
     dirout = Path("data")
 
     df_sydney = parse(dirin, bin_hours=1.0)
-    df_sydney = df_sydney[df_sydney["time_step"] <= 48]
+    df_sydney = df_sydney[df_sydney["time_step"] <= 24]
     charlie_csv = dirout / "sydneysiege.csv"
     df_sydney.to_csv(charlie_csv, index=False)
     print("Saved successfully")
