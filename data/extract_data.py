@@ -57,13 +57,13 @@ def parse(dir: Path, bin_hours: float = 1.0) -> pd.DataFrame:
 
 
 def main():
-    dirin = Path("data/charliehebdo")
+    dirin = Path("data/sydneysiege")
     dirout = Path("data")
 
-    df_charlie = parse(dirin, bin_hours=4.0)
-    df_charlie = df_charlie[df_charlie["time_step"] <= 60]
-    charlie_csv = dirout / "charliehebdo.csv"
-    df_charlie.to_csv(charlie_csv, index=False)
+    df_sydney = parse(dirin, bin_hours=1.0)
+    df_sydney = df_sydney[df_sydney["time_step"] <= 48]
+    charlie_csv = dirout / "sydneysiege.csv"
+    df_sydney.to_csv(charlie_csv, index=False)
     print("Saved successfully")
 
 
